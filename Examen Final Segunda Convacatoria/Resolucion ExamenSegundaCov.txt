@@ -1,0 +1,75 @@
+
+------------Ejercicio N1----------------------------------------------
+
+delimiter $$
+DROP PROCEDURE if EXISTS insertarDP $$
+CREATE PROCEDURE CrearProducto(IN _Nombre varchar(100),IN _Precio float,
+IN _ExistenciaTotal float, IN _Anulado boolean)
+BEGIN
+INSERT INTO Producto(Nombre, Precio, ExistenciaTotal, Anulado)
+VALUES(_Nombre,_Precio,_ExistenciaTotal,_Anulado);
+end $$
+
+
+-----------Ejercicio N2-------------------------------------------------
+delimiter $$
+DROP TRIGGER IF EXISTS InsertarP $$
+CREATE TRIGGER InsertarP
+BEFORE INSERT ON producto 
+FOR EACH ROW
+BEGIN
+ DECLARE cantp INT;
+ DECLARE f DATE;
+ DECLARE Exist INT;
+ DECLARE aux INT ;
+ SET f=CURDATE(); 
+ SET aux=0;
+ SET cantp= (SELECT COUNT(*) FROM lote WHERE new.id=Producto_id )+1;  
+ SET Exist=new.ExistenciaTotal;
+ INSERT INTO lote(NoLote,Fecha,ExistenciaInicial,ExistenciaActual,Terminado,Producto_id)
+ VALUES(cantp,f,exist,exist,aux,new.id);
+ 
+END $$
+
+
+
+
+----------Ejercicio N3---------------------------------------------------
+
+----Primer triggers ---------------------
+delimiter $$
+DROP TRIGGER IF EXISTS AnularProducto $$
+CREATE TRIGGER AnularProducto
+AFTER UPDATE ON Producto 
+FOR EACH ROW
+BEGIN
+ IF NEW.Anulado=1 THEN
+	UPDATE Lote SET ExistenciaActual = 0 WHERE Producto_id=NEW.id;
+	UPDATE Lote SET Terminado = 1 WHERE Producto_id=NEW.id;
+ END IF;
+END $$
+
+-----segundo triggers -------------------
+
+delimiter $$
+DROP TRIGGER IF EXISTS CrearMovimientoLoteAnulado $$
+CREATE TRIGGER CrearMovimientoLoteAnulado
+AFTER UPDATE ON Lote 
+FOR EACH ROW
+BEGIN
+ DECLARE motivoLote VARCHAR(45);
+ SET motivoLote = CONCAT("Anulacion Lote",NEW.id);
+ IF NEW.Terminado = 1 THEN
+	INSERT INTO movimiento(Motivo,CantidadEntrada,CantidadSalida,Anulado,Lote_id)
+   VALUES(motivoLote,0,NEW.ExistenciaInicial,0,NEW.id);
+ END IF;
+END $$
+
+
+
+
+
+
+
+
+
